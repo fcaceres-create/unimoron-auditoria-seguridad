@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>El eslabón que ningún firewall protege — F. Cáceres</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#070B16;
+  --bg-2:#0B1120;
+  --panel:#0E1626;
+  --panel-2:#121C30;
+  --line:rgba(148,163,184,.14);
+  --line-strong:rgba(148,163,184,.28);
+  --text:#E6EDF6;
+  --muted:#93A4BC;
+  --muted-2:#64748B;
+  --teal:#2DD4BF;
+  --teal-dim:#14B8A6;
+  --red:#F0556B;
+  --red-dim:#E5484D;
+  --amber:#F5B544;
+  --shadow:0 30px 80px -20px rgba(0,0,0,.7);
+  --r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- background ---------- */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(148,163,184,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(148,163,184,.045) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 30%,transparent 100%);
+}
+.bg-glow{
+  position:fixed;z-index:0;pointer-events:none;border-radius:50%;
+  filter:blur(120px);opacity:.5;
+}
+.glow-1{width:620px;height:620px;background:radial-gradient(circle,rgba(45,212,191,.22),transparent 70%);top:-220px;right:-160px}
+.glow-2{width:560px;height:560px;background:radial-gradient(circle,rgba(240,85,107,.14),transparent 70%);bottom:-240px;left:-160px}
+
+/* ---------- deck ---------- */
+.deck{position:relative;z-index:2;height:100vh;width:100vw}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:5vh 8vw 11vh;
+  opacity:0;visibility:hidden;
+  transform:translateY(24px) scale(.985);
+  transition:opacity .5s ease,transform .55s cubic-bezier(.22,1,.36,1),visibility .5s;
+}
+.slide.active{opacity:1;visibility:visible;transform:none}
+.slide.prev{transform:translateY(-24px) scale(.985)}
+
+/* shared atoms */
+.kicker{
+  display:inline-flex;align-items:center;gap:.6rem;
+  font-size:.72rem;font-weight:600;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:1.6rem;
+}
+.kicker::before{content:"";width:30px;height:2px;background:var(--teal);border-radius:2px}
+h1{font-size:clamp(2.4rem,5.6vw,5rem);font-weight:800;line-height:1.02;letter-spacing:-.02em}
+h2{font-size:clamp(1.9rem,4vw,3.2rem);font-weight:800;line-height:1.08;letter-spacing:-.02em;margin-bottom:.4rem}
+.accent{color:var(--teal)}
+.accent-red{color:var(--red)}
+.lead{font-size:clamp(1.05rem,1.7vw,1.45rem);color:var(--muted);line-height:1.6;max-width:62ch;font-weight:300}
+.serif{font-family:'Spectral',Georgia,serif}
+.num-tag{font-size:.8rem;font-weight:700;color:var(--teal);letter-spacing:.1em}
+
+/* ---------- COVER ---------- */
+.cover .top-row{display:flex;align-items:center;gap:1rem;margin-bottom:auto}
+.brand-line{font-size:.72rem;font-weight:600;letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
+.brand-line b{color:var(--teal)}
+.pill{
+  border:1px solid var(--line-strong);border-radius:999px;
+  padding:.35rem .9rem;font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2)
+}
+.cover h1{margin:.2em 0 .55em}
+.cover .sub{font-size:clamp(1.1rem,2.2vw,1.7rem);color:var(--muted);font-style:italic;font-family:'Spectral',serif;max-width:46ch;line-height:1.45}
+.quote-bar{
+  border-left:3px solid var(--red);padding-left:1.1rem;margin-top:2.2rem;
+  font-size:clamp(1rem,1.6vw,1.35rem);font-weight:500;color:var(--text)
+}
+.cover .meta{
+  margin-top:auto;display:grid;grid-template-columns:repeat(3,auto);gap:2.4rem 4rem;
+  padding-top:2.6rem;border-top:1px solid var(--line)
+}
+.meta .lbl{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-bottom:.35rem}
+.meta .val{font-size:.95rem;color:var(--text);font-weight:500}
+.meta .val span{display:block;color:var(--muted);font-weight:400;font-size:.85rem}
+
+/* ---------- generic content blocks ---------- */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:3.2rem;align-items:center}
+.stack{display:flex;flex-direction:column;gap:1.1rem;margin-top:1.6rem}
+
+.cards{display:grid;gap:1.1rem;margin-top:2rem}
+.cards.c2{grid-template-columns:1fr 1fr}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.card{
+  background:linear-gradient(160deg,var(--panel),var(--bg-2));
+  border:1px solid var(--line);border-radius:var(--r);
+  padding:1.5rem 1.6rem;position:relative;overflow:hidden;
+}
+.card .c-ico{font-size:1.4rem;margin-bottom:.7rem;display:block}
+.card h3{font-size:1.05rem;font-weight:700;margin-bottom:.45rem}
+.card p{font-size:.92rem;color:var(--muted);line-height:1.55;font-weight:300}
+.card.teal{border-color:rgba(45,212,191,.3)}
+.card.teal::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--teal)}
+.card.red{border-color:rgba(240,85,107,.3)}
+.card.red::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--red)}
+
+/* big stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:.5rem}
+.stat{
+  background:linear-gradient(160deg,var(--panel),var(--bg-2));
+  border:1px solid var(--line);border-radius:var(--r);padding:1.8rem 1.6rem;
+}
+.stat .big{font-size:clamp(2.4rem,5vw,3.6rem);font-weight:800;line-height:1;letter-spacing:-.03em}
+.stat .big.red{color:var(--red)}
+.stat .big.teal{color:var(--teal)}
+.stat .lab{margin-top:.8rem;font-size:.86rem;color:var(--muted);line-height:1.5;font-weight:300}
+
+/* timeline / phases */
+.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-top:2rem;align-items:stretch}
+.phase{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:1.3rem 1.2rem;position:relative;display:flex;flex-direction:column;
+}
+.phase .pn{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:.7rem}
+.phase h4{font-size:1.02rem;font-weight:700;margin-bottom:.5rem;line-height:1.15}
+.phase p{font-size:.82rem;color:var(--muted);line-height:1.45;font-weight:300;flex:1}
+.phase .tag{margin-top:.9rem;font-size:.68rem;font-weight:600;letter-spacing:.04em}
+.phase.ok{border-color:rgba(45,212,191,.35)}
+.phase.ok .pn,.phase.ok .tag{color:var(--teal)}
+.phase.hit{border-color:rgba(240,85,107,.5);background:linear-gradient(160deg,rgba(240,85,107,.08),var(--panel))}
+.phase.hit .pn,.phase.hit .tag{color:var(--red)}
+.phase.dark{background:linear-gradient(160deg,#1A1014,#0E0A10);border-color:rgba(240,85,107,.4)}
+.phase.dark .pn,.phase.dark .tag{color:var(--red)}
+.phase .money{font-size:2rem;font-weight:800;color:var(--red);line-height:1}
+.arrow-row{display:none}
+
+/* checklist (implicancias) */
+.checklist{display:grid;grid-template-columns:1fr 1fr;gap:1rem 2.2rem;margin-top:1.8rem}
+.check{display:flex;gap:1rem;align-items:flex-start}
+.check .dot{
+  flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.4);color:var(--teal);
+  font-size:1rem;margin-top:.1rem;
+}
+.check h4{font-size:1rem;font-weight:700;margin-bottom:.2rem}
+.check p{font-size:.85rem;color:var(--muted);line-height:1.5;font-weight:300}
+
+/* onion diagram */
+.onion-wrap{display:flex;justify-content:center;align-items:center}
+.onion{position:relative;width:min(42vh,420px);aspect-ratio:1}
+.ring{
+  position:absolute;border-radius:50%;border:1px solid var(--line-strong);
+  display:grid;place-items:flex-start;justify-content:center;
+  inset:0;
+}
+.ring span{font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);margin-top:.5rem}
+.r1{inset:0;background:rgba(20,40,60,.18)}
+.r2{inset:9%;background:rgba(20,45,70,.22)}
+.r3{inset:19%;background:rgba(20,55,85,.26)}
+.r4{inset:29%;background:rgba(20,70,105,.3)}
+.r5{inset:39%;background:rgba(20,90,130,.34)}
+.core{
+  position:absolute;inset:50%;width:34%;height:34%;transform:translate(-50%,-50%);
+  border-radius:50%;background:radial-gradient(circle,var(--red),#9B2230);
+  display:grid;place-items:center;text-align:center;
+  box-shadow:0 0 50px rgba(240,85,107,.5);border:1px solid rgba(255,255,255,.15);
+}
+.core b{font-size:.95rem;font-weight:800}
+.core span{font-size:.66rem;color:rgba(255,255,255,.8);display:block;margin-top:.2rem}
+.attack-label{
+  position:absolute;top:-6%;left:-4%;color:var(--red);font-weight:700;font-size:.85rem;text-align:left
+}
+.attack-label span{display:block;font-size:.68rem;font-weight:400;color:var(--red-dim);letter-spacing:.04em}
+.attack-arrow{position:absolute;top:6%;left:8%;width:46%;height:46%;z-index:3;pointer-events:none}
+
+/* trend chart */
+.chart{position:relative;width:100%;height:46vh;max-height:420px;margin-top:1rem}
+.legend{display:flex;gap:2rem;margin-top:1.2rem;font-size:.85rem}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:.5rem;vertical-align:middle}
+
+/* conclusion */
+.closing h1{font-size:clamp(2rem,4.4vw,3.6rem);max-width:20ch}
+.big-quote{
+  font-family:'Spectral',serif;font-size:clamp(1.6rem,3.4vw,2.8rem);
+  font-weight:500;line-height:1.25;max-width:24ch
+}
+.big-quote .accent{font-style:italic}
+
+/* references */
+.refs{columns:2;column-gap:3rem;margin-top:1.8rem;font-size:.82rem;color:var(--muted);line-height:1.5}
+.refs p{break-inside:avoid;margin-bottom:.9rem;font-weight:300}
+.refs b{color:var(--text);font-weight:600}
+
+/* ---------- chrome ---------- */
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--teal),var(--teal-dim));z-index:50;transition:width .4s ease;box-shadow:0 0 12px rgba(45,212,191,.6)}
+.footer{
+  position:fixed;bottom:2.2vh;left:8vw;right:8vw;z-index:40;
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);
+}
+.footer .ttl{color:var(--muted)}
+.nav{position:fixed;bottom:1.8vh;right:2vw;z-index:45;display:flex;gap:.5rem}
+.nav button{
+  width:38px;height:38px;border-radius:10px;border:1px solid var(--line-strong);
+  background:rgba(14,22,38,.7);color:var(--muted);font-size:1rem;cursor:pointer;
+  backdrop-filter:blur(8px);transition:.2s;display:grid;place-items:center;
+}
+.nav button:hover{color:var(--teal);border-color:var(--teal);transform:translateY(-2px)}
+.counter{position:fixed;bottom:2.4vh;left:50%;transform:translateX(-50%);z-index:45;font-size:.72rem;color:var(--muted-2);letter-spacing:.15em}
+.counter b{color:var(--text)}
+.dots{position:fixed;top:50%;right:2.2vw;transform:translateY(-50%);z-index:45;display:flex;flex-direction:column;gap:.6rem}
+.dots button{width:8px;height:8px;border-radius:50%;border:none;background:var(--line-strong);cursor:pointer;transition:.25s;padding:0}
+.dots button.on{background:var(--teal);transform:scale(1.5);box-shadow:0 0 10px var(--teal)}
+
+.fade-up{opacity:0;transform:translateY(18px)}
+.slide.active .fade-up{animation:fadeUp .6s cubic-bezier(.22,1,.36,1) forwards}
+.slide.active .fade-up.d1{animation-delay:.08s}
+.slide.active .fade-up.d2{animation-delay:.16s}
+.slide.active .fade-up.d3{animation-delay:.24s}
+.slide.active .fade-up.d4{animation-delay:.32s}
+.slide.active .fade-up.d5{animation-delay:.40s}
+.slide.active .fade-up.d6{animation-delay:.48s}
+@keyframes fadeUp{to{opacity:1;transform:none}}
+
+
+@media (max-width:820px){
+  .two-col{grid-template-columns:1fr;gap:1.6rem}
+  .cards.c3,.stats,.phases{grid-template-columns:1fr 1fr}
+  .checklist{grid-template-columns:1fr}
+  .cover .meta{grid-template-columns:1fr 1fr;gap:1.4rem}
+  .refs{columns:1}
+  .dots{display:none}
+  .slide{padding:7vh 6vw}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow glow-1"></div>
+<div class="bg-glow glow-2"></div>
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · COVER -->
+  <section class="slide cover active">
+    <div class="top-row">
+      <span class="brand-line">Seguridad Informática · <b>IA</b></span>
+      <span class="pill">Trabajo de investigación</span>
+    </div>
+    <div>
+      <h1 class="fade-up">El eslabón que<br><span class="accent">ningún firewall</span> protege</h1>
+      <p class="sub fade-up d1">El impacto epistemológico de la inteligencia artificial en la seguridad informática</p>
+      <p class="quote-bar fade-up d2">El firewall protege los paquetes; no protege la realidad.</p>
+    </div>
+    <div class="meta fade-up d3">
+      <div><div class="lbl">Autor</div><div class="val">Fernando Cáceres<span>Matrícula 1328-0002</span></div></div>
+      <div><div class="lbl">Cátedra</div><div class="val">Auditoría y Seguridad de<br>Sistemas de Información</div></div>
+      <div><div class="lbl">Institución</div><div class="val">Universidad de Morón<span>Junio 2026</span></div></div>
+    </div>
+  </section>
+
+  <!-- 2 · TESIS / HOOK -->
+  <section class="slide">
+    <span class="kicker fade-up">La tesis</span>
+    <h2 class="fade-up d1">El impacto decisivo de la IA en seguridad<br>no es <span class="accent-red">técnico</span>, es <span class="accent">epistemológico</span>.</h2>
+    <p class="lead fade-up d2" style="margin-top:1.2rem">
+      Durante décadas la disciplina protegió la red, los datos y las identidades. La IA generativa no
+      ataca esas capas: las <b style="color:var(--text)">esquiva</b> por completo y golpea el único componente que
+      ningún control técnico cubre — la capacidad humana de distinguir lo <span class="accent">real</span> de lo <span class="accent-red">fabricado</span>.
+    </p>
+    <div class="cards c2 fade-up d3">
+      <div class="card"><span class="c-ico">🛡️</span><h3>La pregunta clásica</h3><p>¿Cómo impido que un atacante <b style="color:var(--text)">entre</b> al sistema?</p></div>
+      <div class="card teal"><span class="c-ico">🧠</span><h3>La pregunta nueva</h3><p>¿Cómo <b style="color:var(--text)">verifico</b> que lo que percibo —una voz, un rostro, una orden— corresponde a la realidad?</p></div>
+    </div>
+  </section>
+
+  <!-- 3 · LAS MURALLAS -->
+  <section class="slide">
+    <span class="kicker fade-up">El modelo tradicional</span>
+    <h2 class="fade-up d1">Una larga acumulación de murallas</h2>
+    <p class="lead fade-up d2" style="margin-top:.8rem">La defensa en profundidad asume que el adversario <b style="color:var(--text)">debe atravesar</b> cada capa para alcanzar su objetivo.</p>
+    <div class="cards c3 fade-up d3" style="margin-top:2rem">
+      <div class="card"><span class="c-ico">🧱</span><h3>Perímetro y red</h3><p>Firewall, segmentación, detección de intrusiones.</p></div>
+      <div class="card"><span class="c-ico">🔐</span><h3>Datos e identidad</h3><p>Criptografía, IAM, autenticación multifactor.</p></div>
+      <div class="card"><span class="c-ico">🎯</span><h3>El punto ciego histórico</h3><p>La <b style="color:var(--text)">ingeniería social</b>: manipular a las personas para que ellas mismas franqueen las defensas.</p></div>
+    </div>
+    <p class="lead fade-up d4" style="margin-top:1.6rem;font-size:1.1rem">
+      La IA no inventa una amenaza nueva. Multiplica su <span class="accent">escala</span>, su <span class="accent">verosimilitud</span> y su <span class="accent">accesibilidad</span>.
+    </p>
+  </section>
+
+  <!-- 4 · LOS DOS SUPUESTOS -->
+  <section class="slide">
+    <span class="kicker fade-up">Lo que la IA demuele</span>
+    <h2 class="fade-up d1">Dos supuestos que la disciplina nunca explicitó</h2>
+    <div class="cards c2 fade-up d2" style="margin-top:2rem">
+      <div class="card red">
+        <span class="num-tag">SUPUESTO 01</span>
+        <h3 style="margin-top:.5rem">La barrera de habilidad</h3>
+        <p>Fabricar un ataque convincente exigía tiempo, talento y recursos. Esa fricción <b style="color:var(--text)">limitaba el volumen y la calidad</b> de las amenazas.</p>
+        <p style="margin-top:.8rem;color:var(--red)">→ Los LLM la desploman: phishing impecable, en cualquier idioma, personalizado, a costo casi nulo.</p>
+      </div>
+      <div class="card red">
+        <span class="num-tag">SUPUESTO 02</span>
+        <h3 style="margin-top:.5rem">La percepción como autenticación</h3>
+        <p>«Si <b style="color:var(--text)">veo y escucho</b> a mi gerente en una videollamada, confío en que es él.» Una heurística tan arraigada que nadie la cuestiona.</p>
+        <p style="margin-top:.8rem;color:var(--red)">→ La síntesis de voz y video la convierte en una vulnerabilidad explotable.</p>
+      </div>
+    </div>
+    <p class="lead fade-up d3" style="margin-top:1.8rem">Cuando <b style="color:var(--text)">ver y oír</b> dejan de ser garantía de autenticidad, colapsa un control que operaba por debajo del radar de toda política de seguridad.</p>
+  </section>
+
+  <!-- 5 · ONION DIAGRAM -->
+  <section class="slide">
+    <span class="kicker fade-up">Defensa en profundidad vs. bypass de IA</span>
+    <div class="two-col" style="margin-top:1rem">
+      <div>
+        <h2 class="fade-up d1">El ataque no<br>atraviesa las capas.<br><span class="accent-red">Las esquiva.</span></h2>
+        <p class="lead fade-up d2" style="margin-top:1.2rem">
+          Las capas técnicas —perímetro, red, host, aplicación, datos— permanecen <b style="color:var(--text)">intactas</b>.
+          El ataque impacta directamente en el núcleo humano, el único componente que ningún control técnico protege.
+        </p>
+      </div>
+      <div class="onion-wrap fade-up d3">
+        <div class="onion">
+          <div class="ring r1"><span>Perímetro</span></div>
+          <div class="ring r2"><span>Red</span></div>
+          <div class="ring r3"><span>Host</span></div>
+          <div class="ring r4"><span>App</span></div>
+          <div class="ring r5"><span>Datos</span></div>
+          <div class="core"><div><b>Usuario</b><span>capa humana</span></div></div>
+          <div class="attack-label">Ataque de IA<span>deepfake · ing. social</span></div>
+          <svg class="attack-arrow" viewBox="0 0 100 100" fill="none">
+            <path d="M4 4 Q 55 25 50 46" stroke="var(--red)" stroke-width="2.5" stroke-dasharray="4 4"/>
+            <path d="M50 46 l -7 -8 M50 46 l 7 -7" stroke="var(--red)" stroke-width="2.5"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · CASO ARUP INTRO -->
+  <section class="slide">
+    <span class="kicker fade-up">Caso de uso actual</span>
+    <h1 class="fade-up d1" style="font-size:clamp(2rem,5vw,4.2rem)">Anatomía del<br>fraude a <span class="accent">Arup</span></h1>
+    <p class="lead fade-up d2" style="margin-top:1.2rem">
+      Enero de 2024. La firma británica de ingeniería —responsable de la Ópera de Sídney— sufre uno
+      de los fraudes asistidos por IA <b style="color:var(--text)">mejor documentados</b> hasta la fecha.
+    </p>
+    <p class="lead fade-up d3" style="margin-top:.8rem;font-style:italic;font-family:'Spectral',serif;color:var(--teal)">
+      Un empleado transfirió 25,6 millones de dólares tras una videollamada íntegramente compuesta por deepfakes.
+    </p>
+  </section>
+
+  <!-- 7 · SECUENCIA / FASES -->
+  <section class="slide">
+    <span class="kicker fade-up">La secuencia del ataque</span>
+    <h2 class="fade-up d1">La defensa funcionó… hasta que vio y oyó</h2>
+    <div class="phases">
+      <div class="phase fade-up d2">
+        <div class="pn">Fase 01 · Contacto</div>
+        <h4>Correo falso</h4>
+        <p>Email del supuesto CFO de la casa matriz pide transferencias confidenciales y urgentes.</p>
+        <div class="tag" style="color:var(--muted-2)">Phishing clásico</div>
+      </div>
+      <div class="phase ok fade-up d3">
+        <div class="pn">Fase 02 · Alarma</div>
+        <h4>El empleado duda</h4>
+        <p>La urgencia y el secreto encienden sus alarmas. No actúa solo por el correo.</p>
+        <div class="tag">✓ La defensa funciona</div>
+      </div>
+      <div class="phase hit fade-up d4">
+        <div class="pn">Fase 03 · Inflexión</div>
+        <h4>Escalación epistemológica</h4>
+        <p>Videollamada con deepfakes de voz y video del CFO y colegas, en tiempo real.</p>
+        <div class="tag">Validación sensorial falsa</div>
+      </div>
+      <div class="phase dark fade-up d5">
+        <div class="pn">Fase 04 · Consumación</div>
+        <div class="money">25,6 M</div>
+        <h4 style="margin-top:.4rem;font-size:.92rem;color:var(--muted)">USD transferidos</h4>
+        <div class="tag">15 operaciones · 5 cuentas</div>
+      </div>
+    </div>
+    <p class="lead fade-up d6" style="margin-top:1.6rem;font-size:1.05rem">La duda razonable que lo frenó <b style="color:var(--text)">se evaporó</b> frente a una prueba que parecía irrefutable: la presencia visible de personas conocidas.</p>
+  </section>
+
+  <!-- 8 · POR QUÉ ES REVELADOR -->
+  <section class="slide">
+    <span class="kicker fade-up">Por qué este caso es revelador</span>
+    <h2 class="fade-up d1">No se vulneró <span class="accent-red">ningún</span> sistema</h2>
+    <div class="stats fade-up d2" style="margin-top:1.8rem">
+      <div class="stat"><div class="big red">25,6 M</div><div class="lab">dólares transferidos en 15 operaciones a 5 cuentas en Hong Kong</div></div>
+      <div class="stat"><div class="big teal">0</div><div class="lab">sistemas vulnerados: ni credenciales, ni red, ni software explotado</div></div>
+      <div class="stat"><div class="big">~45 min</div><div class="lab">para fabricar un deepfake propio con herramientas gratuitas y de código abierto</div></div>
+    </div>
+    <p class="lead fade-up d3" style="margin-top:1.8rem">
+      Toda la inversión en firewalls, cifrado, MFA y detección permaneció <b style="color:var(--text)">intacta… e irrelevante</b>.
+      El adversario nunca intentó franquear esas capas. <span class="accent">La defensa en profundidad protege la red; no protege la percepción.</span>
+    </p>
+  </section>
+
+  <!-- 9 · DEMOCRATIZACIÓN -->
+  <section class="slide">
+    <span class="kicker fade-up">La otra cara del fenómeno</span>
+    <h2 class="fade-up d1">La democratización del atacante</h2>
+    <p class="lead fade-up d2" style="margin-top:.8rem">Si Arup ilustra la dimensión <b style="color:var(--text)">perceptual</b>, los modelos de lenguaje maliciosos ilustran la dimensión <b style="color:var(--text)">económica</b>: cae la barrera de entrada.</p>
+    <div class="cards c3 fade-up d3" style="margin-top:1.8rem">
+      <div class="card red"><span class="c-ico">🐛</span><h3>WormGPT · FraudGPT</h3><p>Desde 2023, asistentes «sin restricciones éticas» para redactar phishing y generar malware.</p></div>
+      <div class="card red"><span class="c-ico">🧩</span><h3>Jailbreaks sobre LLM legítimos</h3><p>Nuevas variantes son envoltorios sobre Grok o Mixtral, con instrucciones que sortean salvaguardas.</p></div>
+      <div class="card red"><span class="c-ico">💳</span><h3>Cibercrimen como servicio</h3><p>Sin pericia ni infraestructura: una suscripción de pocas decenas de euros al mes.</p></div>
+    </div>
+    <p class="lead fade-up d4" style="margin-top:1.6rem;font-size:1.05rem">El atacante ya no necesita ser experto. <span class="accent-red">Alquila la capacidad.</span></p>
+  </section>
+
+  <!-- 10 · TREND CHART -->
+  <section class="slide">
+    <span class="kicker fade-up">Evolución de la amenaza</span>
+    <h2 class="fade-up d1">Baja la barrera, se dispara el ataque</h2>
+    <div class="two-col" style="margin-top:1rem;grid-template-columns:1.4fr 1fr">
+      <div class="fade-up d2">
+        <canvas id="trend" class="chart"></canvas>
+        <div class="legend">
+          <span><i style="background:var(--teal)"></i>Barrera de habilidad / costo</span>
+          <span><i style="background:var(--red)"></i>Volumen y verosimilitud</span>
+        </div>
+      </div>
+      <p class="lead fade-up d3">
+        A medida que el costo de producir un ataque convincente se desploma, el volumen de amenazas
+        verosímiles que una organización puede recibir <b style="color:var(--text)">se multiplica</b> — precisamente
+        el factor que la antigua barrera de habilidad mantenía acotado.
+      </p>
+    </div>
+  </section>
+
+  <!-- 11 · IMPLICANCIAS -->
+  <section class="slide">
+    <span class="kicker fade-up">Implicancias para el especialista</span>
+    <h2 class="fade-up d1">Los controles técnicos siguen siendo necesarios, pero ya no alcanzan</h2>
+    <div class="checklist fade-up d2">
+      <div class="check"><div class="dot">◇</div><div><h4>Verificación fuera de banda</h4><p>Toda acción crítica se confirma por un canal independiente y preestablecido — nunca el mismo por el que llegó.</p></div></div>
+      <div class="check"><div class="dot">◇</div><div><h4>Autorización dual</h4><p>Que el engaño de una sola persona no baste. Esto habría contenido a Arup — sin tecnología nueva.</p></div></div>
+      <div class="check"><div class="dot">◇</div><div><h4>Concientización para la era deepfake</h4><p>La presencia audiovisual de alguien <b style="color:var(--text)">no</b> es prueba de identidad. Verificar incluso a una autoridad.</p></div></div>
+      <div class="check"><div class="dot">◇</div><div><h4>Zero-trust en la identidad</h4><p>«Nunca confiar, siempre verificar» se extiende de la red a la identidad humana.</p></div></div>
+      <div class="check"><div class="dot">◇</div><div><h4>Procedencia del contenido</h4><p>Firma y detección de manipulación audiovisual — complementos, no soluciones definitivas.</p></div></div>
+      <div class="check"><div class="dot">↗</div><div><h4>Una expansión de competencias</h4><p>Son controles de proceso, cultura e identidad. El perímetro de responsabilidad se amplía.</p></div></div>
+    </div>
+  </section>
+
+  <!-- 12 · CONCLUSIÓN -->
+  <section class="slide closing">
+    <span class="kicker fade-up">Conclusión</span>
+    <h2 class="fade-up d1" style="margin-bottom:1.4rem">El perímetro de seguridad se ha desplazado</h2>
+    <p class="big-quote fade-up d2">
+      Ya no coincide con el borde de la red, sino con la frontera —difusa— entre lo <span class="accent">auténtico</span> y lo <span class="accent-red">sintético</span>.
+    </p>
+    <p class="lead fade-up d3" style="margin-top:1.8rem">
+      El firewall protege los paquetes; no protege la realidad. Esa capa —la confianza, la verificación de lo percibido—
+      es la que el especialista en seguridad está ahora obligado a custodiar. Comprender ese desplazamiento,
+      antes que dominar una herramienta puntual, es <b style="color:var(--text)">la competencia decisiva</b> de esta era.
+    </p>
+  </section>
+
+  <!-- 13 · GRACIAS / REFS -->
+  <section class="slide">
+    <span class="kicker fade-up">Gracias</span>
+    <h1 class="fade-up d1" style="font-size:clamp(1.8rem,4.4vw,3.4rem)">¿Preguntas?</h1>
+    <p class="lead fade-up d2" style="margin-top:.6rem">Fernando Cáceres · Matrícula 1328-0002 · Universidad de Morón</p>
+    <div class="refs fade-up d3">
+      <p><b>CNN Business</b> (2024). Arup revealed as victim of $25 million deepfake scam involving Hong Kong employee.</p>
+      <p><b>Prakash, P.</b> (2024). A deepfake 'CFO' tricked the British design firm behind the Sydney Opera House. <i>Fortune.</i></p>
+      <p><b>Cyber Helmets</b> (2026). $25M deepfake CFO scam on video call.</p>
+      <p><b>Rapid7</b> (2025). AI goes on offense: How LLMs are redefining the cybercrime landscape.</p>
+      <p><b>CSO Online</b> (2025). WormGPT returns: New malicious AI variants built on Grok and Mixtral.</p>
+      <p><b>SoCRadar</b> (2026). WormGPT: The blueprint for malicious AI.</p>
+      <p><b>Sumsub</b> (2024). Identity Fraud Report 2024.</p>
+      <p><b>World Economic Forum</b> (2025). Cybercrime: lessons learned from a $25m deepfake attack.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- chrome -->
+<div class="footer">
+  <span class="ttl">El eslabón que ningún firewall protege</span>
+  <span>F. Cáceres · 2026</span>
+</div>
+<div class="counter"><b id="cur">1</b> / <span id="total">13</span></div>
+<div class="nav">
+  <button id="prevBtn" aria-label="Anterior">‹</button>
+  <button id="nextBtn" aria-label="Siguiente">›</button>
+</div>
+<div class="dots" id="dots"></div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+let i=0;
+const total=slides.length;
+document.getElementById('total').textContent=total;
+
+const dotsWrap=document.getElementById('dots');
+slides.forEach((_,n)=>{
+  const b=document.createElement('button');
+  b.addEventListener('click',()=>go(n));
+  dotsWrap.appendChild(b);
+});
+const dots=[...dotsWrap.children];
+
+function go(n){
+  if(n<0||n>=total||n===i) {n=Math.max(0,Math.min(total-1,n)); if(n===i)return;}
+  slides[i].classList.remove('active');
+  slides[i].classList.add('prev');
+  const old=i; i=n;
+  setTimeout(()=>slides[old].classList.remove('prev'),550);
+  slides[i].classList.add('active');
+  slides[i].classList.remove('prev');
+  document.getElementById('progress').style.width=((i+1)/total*100)+'%';
+  document.getElementById('cur').textContent=i+1;
+  dots.forEach((d,k)=>d.classList.toggle('on',k===i));
+  if(slides[i].querySelector('#trend')) drawTrend();
+}
+function next(){go(i+1)}
+function prev(){go(i-1)}
+
+document.getElementById('nextBtn').onclick=next;
+document.getElementById('prevBtn').onclick=prev;
+document.addEventListener('keydown',e=>{
+  if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next();}
+  else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev();}
+  else if(e.key==='Home')go(0);
+  else if(e.key==='End')go(total-1);
+  else if(e.key.toLowerCase()==='f'){
+    if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+// touch
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.changedTouches[0].clientX);
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>60){dx<0?next():prev();}
+});
+
+// init
+document.getElementById('progress').style.width=(1/total*100)+'%';
+dots[0].classList.add('on');
+
+// ---- trend chart ----
+function drawTrend(){
+  const c=document.getElementById('trend');
+  if(!c)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=c.clientWidth,h=c.clientHeight;
+  c.width=w*dpr;c.height=h*dpr;
+  const x=c.getContext('2d');x.scale(dpr,dpr);
+  x.clearRect(0,0,w,h);
+  const pad=46,L=pad,R=w-pad,T=24,B=h-42;
+  // axes
+  x.strokeStyle='rgba(148,163,184,.18)';x.lineWidth=1;
+  for(let g=0;g<=4;g++){const yy=T+(B-T)*g/4;x.beginPath();x.moveTo(L,yy);x.lineTo(R,yy);x.stroke();}
+  // labels
+  x.fillStyle='#64748B';x.font='600 11px Inter';
+  x.fillText('ALTO',6,T+4);x.fillText('BAJO',6,B+4);
+  x.textAlign='left';x.fillText('Era pre-IA',L,B+26);
+  x.textAlign='right';x.fillText('Era de la IA',R,B+26);x.textAlign='left';
+  // teal line (barrier down)
+  function line(x1,y1,x2,y2,col,fillCol){
+    const X1=L,X2=R,Y1=T+(B-T)*y1,Y2=T+(B-T)*y2;
+    const grad=x.createLinearGradient(0,T,0,B);
+    grad.addColorStop(0,fillCol);grad.addColorStop(1,'transparent');
+    x.beginPath();x.moveTo(X1,Y1);x.lineTo(X2,Y2);x.lineTo(X2,B);x.lineTo(X1,B);x.closePath();
+    x.fillStyle=grad;x.globalAlpha=.18;x.fill();x.globalAlpha=1;
+    x.beginPath();x.moveTo(X1,Y1);x.lineTo(X2,Y2);x.strokeStyle=col;x.lineWidth=3;x.stroke();
+    x.fillStyle=col;
+    [[X1,Y1],[X2,Y2]].forEach(p=>{x.beginPath();x.arc(p[0],p[1],5,0,7);x.fill();});
+  }
+  line(0,0,0,1,'#2DD4BF','#2DD4BF'); // barrier high->low
+  line(0,1,0,0,'#F0556B','#F0556B'); // volume low->high
+  // crossover marker
+  x.beginPath();x.arc((L+R)/2,(T+B)/2,7,0,7);x.fillStyle='#070B16';x.fill();
+  x.lineWidth=2.5;x.strokeStyle='#E6EDF6';x.stroke();
+}
+window.addEventListener('resize',()=>{if(slides[i].querySelector('#trend'))drawTrend();});
+</script>
+</body>
+</html>
